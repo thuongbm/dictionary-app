@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; // IMPORTANT: Add this
+import 'package:provider/provider.dart';
 import 'hover_builder.dart';
-import '../providers/translation_provider.dart'; // Adjust path as needed
+import '../providers/translation_provider.dart';
+import '../providers/dictionary_provider.dart';
+import '../providers/thesaurus_provider.dart'; 
 
 class TranslationCard extends StatefulWidget {
   const TranslationCard({super.key});
@@ -11,19 +13,19 @@ class TranslationCard extends StatefulWidget {
 }
 
 class _TranslationCardState extends State<TranslationCard> {
-  // 1. Controller for the input field
   final TextEditingController _inputController = TextEditingController();
 
   @override
   void dispose() {
-    _inputController.dispose(); // Clean up memory
+    _inputController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // 2. Listen to the provider for changes
     final translationData = Provider.of<TranslationProvider>(context);
+    final dictProvider = Provider.of<DictionaryProvider>(context);
+    final thesaurusProvider = Provider.of<ThesaurusProvider>(context); 
 
     return Container(
       width: 1000,
@@ -44,7 +46,20 @@ class _TranslationCardState extends State<TranslationCard> {
                 label: "From:",
                 lang: "Tiếng Việt",
                 controller: _inputController,
-                onSubmitted: (val) => translationData.handleTranslation(val),
+                onSubmitted: (val) async {
+                  // --- UPDATED LOGIC ---
+                  // 1. Translate the text
+                  await translationData.handleTranslation(val);
+                  
+                  // 2. ONLY search the Dictionary automatically
+                  if (mounted) {
+                    final result = translationData.resultText;
+                    context.read<DictionaryProvider>().searchWord(result);
+                    
+                    // Thesaurus auto-trigger REMOVED from here 
+                    // to prevent it from showing up until the button is clicked.
+                  }
+                },
                 hasMic: true,
               ),
               
@@ -56,18 +71,23 @@ class _TranslationCardState extends State<TranslationCard> {
                 lang: "English",
                 result: translationData.resultText,
                 isLoading: translationData.isLoading,
+                onSeeMore: () {
+                  // Manual trigger: If they click "See Details", show both.
+                  final result = translationData.resultText;
+                  dictProvider.searchWord(result);
+                  thesaurusProvider.searchThesaurus(result);
+                },
               ),
             ],
           ),
           
-          // CENTER SWAP BUTTON
           _swapButton(),
         ],
       ),
     );
   }
 
-  // --- WIDGET COMPONENTS ---
+  // --- HELPER METHODS ---
 
   Widget _buildInputPane({
     required String label,
@@ -107,6 +127,7 @@ class _TranslationCardState extends State<TranslationCard> {
     required String lang,
     required String result,
     required bool isLoading,
+    required VoidCallback onSeeMore,
   }) {
     return Expanded(
       child: Padding(
@@ -116,12 +137,24 @@ class _TranslationCardState extends State<TranslationCard> {
           children: [
             _langHeader(label, lang),
             const SizedBox(height: 30),
-            // Show spinner if loading, otherwise show result text
             isLoading 
                 ? const Center(child: CircularProgressIndicator()) 
                 : Text(result, style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w400)),
             const Spacer(),
-            _actionIcons(false),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _actionIcons(false),
+                if (result.isNotEmpty && result != "Hello") 
+                  TextButton(
+                    onPressed: onSeeMore,
+                    child: const Text(
+                      "See Details",
+                      style: TextStyle(color: Color(0xFFB04B3A), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
       ),
