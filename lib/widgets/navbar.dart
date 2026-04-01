@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
-// 1. MAKE SURE THIS IMPORT MATCHES YOUR FILE NAME
 import 'hover_builder.dart'; 
 
 class Navbar extends StatelessWidget {
+  final String currentTab;
+  final Function(String) onTabSelected;
+
+  // This is the constructor fixing your error!
+  const Navbar({
+    super.key,
+    required this.currentTab,
+    required this.onTabSelected,
+  });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -20,11 +29,11 @@ class Navbar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          // Menu Items
-          _navItem(Icons.home, "Home", isSelected: true),
-          _navItem(Icons.crop_landscape, "Dictionary"),
-          _navItem(Icons.translate, "Translate"),
-          _navItem(Icons.waves, "Thesaurus"),
+          // Menu Items - pass an ID for each tab
+          _navItem(Icons.home, "Home", "home"),
+          _navItem(Icons.crop_landscape, "Dictionary", "dictionary"),
+          _navItem(Icons.translate, "Translate", "translate"),
+          _navItem(Icons.waves, "Thesaurus", "thesaurus"),
           const Spacer(),
           // Language & Profile
           const Row(
@@ -45,32 +54,35 @@ class Navbar extends StatelessWidget {
     );
   }
 
-  // 2. MOVED INSIDE THE CLASS & REMOVED THE 'transition' ERROR
-  Widget _navItem(IconData icon, String label, {bool isSelected = false}) {
-    return HoverBuilder(
-      builder: (isHovered) {
-        Color contentColor = isSelected
-            ? Colors.red[400]!
-            : (isHovered ? Colors.blue : Colors.black87);
+  Widget _navItem(IconData icon, String label, String tabId) {
+    bool isSelected = currentTab == tabId;
+    
+    return GestureDetector(
+      onTap: () => onTabSelected(tabId),
+      child: HoverBuilder(
+        builder: (isHovered) {
+          Color contentColor = isSelected
+              ? Colors.red[400]!
+              : (isHovered ? Colors.blue : Colors.black87);
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: contentColor),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: contentColor,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  // 'transition' was removed because it's not a valid property here
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: contentColor),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: contentColor,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

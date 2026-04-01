@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'screens/home_screens.dart';
 import 'providers/translation_provider.dart';
 import 'providers/dictionary_provider.dart';
-import 'providers/thesaurus_provider.dart'; // 1. Make sure this is imported
+import 'providers/thesaurus_provider.dart';
+import 'package:flutter/services.dart'; // 1. Make sure this is imported
 
 void main() {
   runApp(

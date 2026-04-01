@@ -8,6 +8,9 @@ import '../providers/translation_provider.dart';
 import '../providers/dictionary_provider.dart';
 import '../providers/thesaurus_provider.dart';
 
+// 1. IMPORT YOUR NEW SCREEN HERE
+import 'translate_screen.dart'; 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -16,8 +19,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // 1. Track which tab is active. Default is 'dictionary'
-  String _activeTab = 'dictionary';
+  String _activeBottomTab = 'dictionary';
+  
+  // Track Top Navigation active tab
+  String _currentNavTab = 'home';
 
   @override
   Widget build(BuildContext context) {
@@ -26,119 +31,140 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Navbar(),
-            Stack(
-              alignment: Alignment.topCenter,
-              children: [
-                Container(
-                  height: 280,
-                  width: double.infinity,
-                  margin: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2962FF),
-                    borderRadius: BorderRadius.circular(35),
-                  ),
-                  child: const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 60),
-                      child: Text(
-                        "Translate and explore the world's languages.",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 200),
-                  child: TranslationCard(),
-                ),
-              ],
+            // Top Navbar
+            Navbar(
+              currentTab: _currentNavTab,
+              onTabSelected: (selectedTab) {
+                setState(() {
+                  _currentNavTab = selectedTab; // This triggers the switch!
+                });
+              },
             ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 100),
-              child: Column(
+            
+            // Render content based on which tab is clicked
+            if (_currentNavTab == 'home') ...[
+              // --- HOME VIEW ---
+              Stack(
+                alignment: Alignment.topCenter,
                 children: [
-                  Row(
-                    children: [
-                      // 2. Dictionary Button
-                      _bottomBtn(
-                        Icons.crop_landscape,
-                        "Dictionary",
-                        // Button is orange only if activeTab is 'dictionary'
-                        isOrange: _activeTab == 'dictionary', 
-                        onTap: () {
-                          setState(() {
-                            _activeTab = 'dictionary';
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 15),
-                      // 3. Thesaurus Button
-                      _bottomBtn(
-                        Icons.waves,
-                        "Thesaurus",
-                        // Button is orange only if activeTab is 'thesaurus'
-                        isOrange: _activeTab == 'thesaurus', 
-                        onTap: () {
-                          setState(() {
-                            _activeTab = 'thesaurus';
-                          });
-                          // Trigger search if result exists
-                          final word = context.read<TranslationProvider>().resultText;
-                          if (word.isNotEmpty && word != "Hello") {
-                             context.read<ThesaurusProvider>().searchThesaurus(word);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // 4. Conditional Rendering: Show only the active section
-                  if (_activeTab == 'dictionary')
-                    Consumer<DictionaryProvider>(
-                      builder: (context, dictProvider, child) {
-                        if (dictProvider.result == null && !dictProvider.isLoading) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: dictProvider.isLoading
-                              ? const Center(child: CircularProgressIndicator())
-                              : DictionaryDisplayWidget(data: dictProvider.result!),
-                        );
-                      },
-                    )
-                  else // Show Thesaurus
-                    Consumer<ThesaurusProvider>(
-                      builder: (context, thesProvider, child) {
-                        if (thesProvider.result == null && !thesProvider.isLoading) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 20),
-                          child: thesProvider.isLoading
-                              ? const Center(child: CircularProgressIndicator(color: Colors.blue))
-                              : ThesaurusDisplayWidget(data: thesProvider.result!),
-                        );
-                      },
+                  Container(
+                    height: 280,
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2962FF),
+                      borderRadius: BorderRadius.circular(35),
                     ),
-                  
-                  const SizedBox(height: 60),
-                  Divider(color: Colors.grey[300]),
+                    child: const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 60),
+                        child: Text(
+                          "Translate and explore the world's languages.",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 200),
+                    child: TranslationCard(),
+                  ),
                 ],
               ),
-            ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 100),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _bottomBtn(
+                          Icons.crop_landscape,
+                          "Dictionary",
+                          isOrange: _activeBottomTab == 'dictionary', 
+                          onTap: () {
+                            setState(() {
+                              _activeBottomTab = 'dictionary';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 15),
+                        _bottomBtn(
+                          Icons.waves,
+                          "Thesaurus",
+                          isOrange: _activeBottomTab == 'thesaurus', 
+                          onTap: () {
+                            setState(() {
+                              _activeBottomTab = 'thesaurus';
+                            });
+                            final word = context.read<TranslationProvider>().resultText;
+                            if (word.isNotEmpty && word != "Hello") {
+                               context.read<ThesaurusProvider>().searchThesaurus(word);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    if (_activeBottomTab == 'dictionary')
+                      Consumer<DictionaryProvider>(
+                        builder: (context, dictProvider, child) {
+                          if (dictProvider.result == null && !dictProvider.isLoading) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: dictProvider.isLoading
+                                ? const Center(child: CircularProgressIndicator())
+                                : DictionaryDisplayWidget(data: dictProvider.result!),
+                          );
+                        },
+                      )
+                    else 
+                      Consumer<ThesaurusProvider>(
+                        builder: (context, thesProvider, child) {
+                          if (thesProvider.result == null && !thesProvider.isLoading) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: thesProvider.isLoading
+                                ? const Center(child: CircularProgressIndicator(color: Colors.blue))
+                                : ThesaurusDisplayWidget(data: thesProvider.result!),
+                          );
+                        },
+                      ),
+                    
+                    const SizedBox(height: 60),
+                    Divider(color: Colors.grey[300]),
+                  ],
+                ),
+              ),
+            ] 
+            
+            // 2. SWITCH TO YOUR NEW SCREEN HERE
+            else if (_currentNavTab == 'translate') ...[
+              const TranslateScreen(), 
+            ]
+            
+            // Fallback for other tabs (like Dictionary or Thesaurus on the top nav)
+            else ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 100),
+                child: Center(child: Text("$_currentNavTab page coming soon!")),
+              )
+            ]
           ],
         ),
       ),
     );
   }
 
+  // Helper widget for bottom buttons
   Widget _bottomBtn(IconData icon, String label,
       {bool isOrange = false, required VoidCallback onTap}) {
     return InkWell(
