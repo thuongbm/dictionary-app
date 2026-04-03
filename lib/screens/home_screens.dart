@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/navbar.dart';
-import '../widgets/dictionary_display.dart';
+import '../widgets/dictionary_display.dart'; // 1. IMPORT ADDED HERE
 import '../providers/dictionary_provider.dart';
 import 'translate_screen.dart'; 
+import 'dictionary_screen.dart'; 
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +15,22 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _currentNavTab = 'home';
+  final TextEditingController _homeSearchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _homeSearchController.dispose();
+    super.dispose();
+  }
+
+  void _performSearch(String word) {
+    if (word.trim().isNotEmpty) {
+      context.read<DictionaryProvider>().searchWord(word.trim());
+      setState(() {
+        _currentNavTab = 'dictionary';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Top Navbar
           Navbar(
             currentTab: _currentNavTab,
             onTabSelected: (selectedTab) {
@@ -30,11 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
-          
-          // Main Body
           Expanded(
             child: _currentNavTab == 'home' 
               ? _buildHomeContent() 
+              : _currentNavTab == 'dictionary'
+                ? const DictionaryScreen()
               : _currentNavTab == 'translate'
                 ? const TranslateScreen()
                 : Center(child: Text("$_currentNavTab page coming soon!")),
@@ -53,9 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF2962FF), // Deep blue top
-            Color(0xFF7A9CFF), // Mid blue
-            Color(0xFFD6E0FF), // Light blue bottom
+            Color(0xFF2962FF),
+            Color(0xFF7A9CFF),
+            Color(0xFFD6E0FF),
           ],
         ),
         borderRadius: BorderRadius.only(
@@ -67,7 +83,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             const SizedBox(height: 80),
-            // Hero Title
             const Text(
               "The World in Every Word",
               style: TextStyle(
@@ -92,9 +107,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: EdgeInsets.only(left: 20, right: 10),
                     child: Icon(Icons.search, color: Colors.grey),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: TextField(
-                      decoration: InputDecoration(
+                      controller: _homeSearchController,
+                      onSubmitted: (value) => _performSearch(value),
+                      decoration: const InputDecoration(
                         hintText: "Search English",
                         hintStyle: TextStyle(color: Colors.grey),
                         border: InputBorder.none,
@@ -104,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () => _performSearch(_homeSearchController.text),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B85FF),
                         foregroundColor: Colors.white,
@@ -135,26 +152,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 _searchTag("Special"),
               ],
             ),
-            
+
+            // --- 2. WORD OF THE DAY CARD ADDED HERE ---
             const SizedBox(height: 60),
             
-            // Word of the Day Card
             Consumer<DictionaryProvider>(
               builder: (context, dictProvider, child) {
-                // If you don't have data loaded yet, you might want to show a default/mocked "Lucullan" card here
-                // to exactly match the Figma until a search happens.
-                if (dictProvider.result == null && !dictProvider.isLoading) {
-                  return const DictionaryDisplayWidget(data: null); // Pass null to show default design
-                }
-                
-                if (dictProvider.isLoading) {
-                  return const CircularProgressIndicator(color: Colors.white);
-                }
-                
-                return DictionaryDisplayWidget(data: dictProvider.result);
+                return Center(
+                  child: DictionaryDisplayWidget(
+                    // Pass the result (will be null on first load, showing "Lucullan")
+                    data: dictProvider.result, 
+                  ),
+                );
               },
             ),
-            const SizedBox(height: 50),
+            
+            const SizedBox(height: 80), // Padding for the bottom
           ],
         ),
       ),
@@ -162,16 +175,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _searchTag(String text) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2), // Transparent white
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
+    return GestureDetector(
+      onTap: () {
+        _homeSearchController.text = text;
+        _performSearch(text);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+        ),
       ),
     );
   }
