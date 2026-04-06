@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/navbar.dart';
-import '../widgets/dictionary_display.dart'; // 1. IMPORT ADDED HERE
+import '../widgets/dictionary_display.dart'; 
 import '../providers/dictionary_provider.dart';
 import 'translate_screen.dart'; 
 import 'dictionary_screen.dart'; 
+import 'thesaurus_screen.dart'; // <-- IMPORT ADDED HERE
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,6 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? const DictionaryScreen()
               : _currentNavTab == 'translate'
                 ? const TranslateScreen()
+              : _currentNavTab == 'thesaurus' // <-- ROUTING LOGIC ADDED HERE
+                ? const ThesaurusScreen()
                 : Center(child: Text("$_currentNavTab page coming soon!")),
           ),
         ],
@@ -153,14 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
 
-            // --- 2. WORD OF THE DAY CARD ADDED HERE ---
+            // Word of the Day Card
             const SizedBox(height: 60),
             
             Consumer<DictionaryProvider>(
               builder: (context, dictProvider, child) {
                 return Center(
                   child: DictionaryDisplayWidget(
-                    // Pass the result (will be null on first load, showing "Lucullan")
                     data: dictProvider.result, 
                   ),
                 );
