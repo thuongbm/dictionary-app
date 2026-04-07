@@ -21,9 +21,9 @@ class _TranslationCardState extends State<TranslationCard> {
     if (text.isNotEmpty) {
       Clipboard.setData(ClipboardData(text: text));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text("Copied to clipboard!"),
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           width: 250,
         ),
@@ -55,12 +55,27 @@ class _TranslationCardState extends State<TranslationCard> {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // ✅ LAYER 1: The Darker Background for the Left Pane
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 500, // Exactly half of the card's 1000 width
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100], // Makes the left side darker
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+              ),
+            ),
+          ),
+
+          // ✅ LAYER 2: Your Content (Text inputs, results, and divider)
           Row(
             children: [
               // LEFT PANE (From)
               _buildInputPane(
                 label: "From:",
-                lang: "Tiếng Việt",
+                lang: translationData.sourceLanguage, 
                 controller: _inputController,
                 onSubmitted: (val) async {
                   await translationData.handleTranslation(val);
@@ -69,7 +84,6 @@ class _TranslationCardState extends State<TranslationCard> {
                     context.read<DictionaryProvider>().searchWord(result);
                   }
                 },
-                // Pass the copy logic for input text
                 onCopy: () => _copyToClipboard(context, _inputController.text),
                 hasMic: true,
               ),
@@ -79,10 +93,9 @@ class _TranslationCardState extends State<TranslationCard> {
               // RIGHT PANE (To)
               _buildResultPane(
                 label: "To:",
-                lang: "English",
+                lang: translationData.targetLanguage, 
                 result: translationData.resultText,
                 isLoading: translationData.isLoading,
-                // Pass the copy logic for result text
                 onCopy: () => _copyToClipboard(context, translationData.resultText),
                 onSeeMore: () {
                   final result = translationData.resultText;
@@ -93,7 +106,10 @@ class _TranslationCardState extends State<TranslationCard> {
             ],
           ),
           
-          _swapButton(),
+          // ✅ LAYER 3: The Swap Button on top of everything
+          _swapButton(onTap: () {
+            translationData.swapLanguages(_inputController);
+          }),
         ],
       ),
     );
@@ -106,7 +122,7 @@ class _TranslationCardState extends State<TranslationCard> {
     required String lang,
     required TextEditingController controller,
     required Function(String) onSubmitted,
-    required VoidCallback onCopy, // Added
+    required VoidCallback onCopy, 
     bool hasMic = false,
   }) {
     return Expanded(
@@ -124,11 +140,14 @@ class _TranslationCardState extends State<TranslationCard> {
               decoration: const InputDecoration(
                 hintText: "Nhập văn bản...",
                 border: InputBorder.none,
+                // ✅ Let the grey[100] background from Layer 1 show through
+                filled: true,
+                fillColor: Colors.transparent, 
                 hintStyle: TextStyle(color: Colors.grey),
               ),
             ),
             const Spacer(),
-            _actionIcons(hasMic, onCopy), // Pass callback
+            _actionIcons(hasMic, onCopy), 
           ],
         ),
       ),
@@ -140,7 +159,7 @@ class _TranslationCardState extends State<TranslationCard> {
     required String lang,
     required String result,
     required bool isLoading,
-    required VoidCallback onCopy, // Added
+    required VoidCallback onCopy, 
     required VoidCallback onSeeMore,
   }) {
     return Expanded(
@@ -158,7 +177,7 @@ class _TranslationCardState extends State<TranslationCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _actionIcons(false, onCopy), // Pass callback
+                _actionIcons(false, onCopy), 
                 if (result.isNotEmpty && result != "Hello") 
                   TextButton(
                     onPressed: onSeeMore,
@@ -178,10 +197,9 @@ class _TranslationCardState extends State<TranslationCard> {
   Widget _langHeader(String label, String lang) {
     return Row(
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey)),
+        Text(label, style: const TextStyle(color: Color.fromARGB(255, 52, 6, 6))),
         const SizedBox(width: 8),
         Text(lang, style: const TextStyle(fontWeight: FontWeight.bold)),
-        const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
       ],
     );
   }
@@ -191,7 +209,7 @@ class _TranslationCardState extends State<TranslationCard> {
       children: [
         if (hasMic) _actionIcon(Icons.mic_none),
         if (hasMic) const SizedBox(width: 15),
-        _actionIcon(Icons.copy, onTap: onCopy), // Triggers copy
+        _actionIcon(Icons.copy, onTap: onCopy), 
         const SizedBox(width: 15),
         _actionIcon(Icons.volume_up_outlined),
       ],
@@ -204,23 +222,26 @@ class _TranslationCardState extends State<TranslationCard> {
         onTap: onTap,
         child: Icon(
           icon,
-          color: isHovered ? Colors.blue : Colors.grey[600],
+          color: isHovered ? Colors.blue : const Color.fromARGB(255, 39, 12, 12),
           size: 22,
         ),
       ),
     );
   }
 
-  Widget _swapButton() {
+  Widget _swapButton({required VoidCallback onTap}) {
     return HoverBuilder(
-      builder: (isHovered) => AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isHovered ? Colors.blue[700] : Colors.black,
-          shape: BoxShape.circle,
+      builder: (isHovered) => GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isHovered ? Colors.blue[700] : Colors.black,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.swap_horiz, color: Colors.white, size: 20),
         ),
-        child: const Icon(Icons.swap_horiz, color: Colors.white, size: 20),
       ),
     );
   }
