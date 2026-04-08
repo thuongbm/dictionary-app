@@ -39,10 +39,15 @@ class TranslationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Pass the actual target language code to the service
       final langCode = _targetLanguage == "English" ? "en" : "vi";
       final result = await _service.translate(input, langCode);
-      _resultText = result.translatedText;
+      
+      // FIX: Check if result is not null before using it
+      if (result != null) {
+        _resultText = result.translatedText;
+      } else {
+        _resultText = "Error: Could not get translation from server.";
+      }
     } catch (e) {
       _resultText = "Error: $e";
     } finally {

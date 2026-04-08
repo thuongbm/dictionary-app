@@ -121,12 +121,22 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
         ),
         const SizedBox(height: 20),
         
-        // Wrap handles the chip layout automatically
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: data.synonyms.map((s) => _buildSynonymChip(s)).toList(),
-        ),
+        // --- PHẦN MỚI THÊM: Xử lý khi không tìm thấy từ đồng nghĩa ---
+        if (data.synonyms.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              "No synonyms found for this word.",
+              style: TextStyle(color: Colors.redAccent, fontSize: 16),
+            ),
+          )
+        else
+          // Wrap handles the chip layout automatically
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: data.synonyms.map((s) => _buildSynonymChip(s)).toList(),
+          ),
       ],
     );
   }

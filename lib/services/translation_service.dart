@@ -1,35 +1,28 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+// lib/services/translation_service.dart
 import '../models/translation_result.dart';
+import 'api_service.dart';
 
 class TranslationService {
-  final String baseUrl = "https://api.yourbackend.com"; 
+  final ApiService _apiService = ApiService(); 
 
-  Future<TranslationResult> translate(String text, String target) async {
-    // --- FOR TESTING: Faking a backend delay ---
-    await Future.delayed(const Duration(seconds: 1)); 
-    
+  // ADD: 'String target' to the arguments here
+  Future<TranslationResult?> translate(String text, String target) async {
     try {
-      // Uncomment this when your backend is ready:
-      /*
-      final response = await http.post(
-        Uri.parse('$baseUrl/translate'),
-        body: jsonEncode({'text': text, 'target': target}),
-        headers: {'Content-Type': 'application/json'},
-      );
-      if (response.statusCode == 200) {
-        return TranslationResult.fromJson(jsonDecode(response.body));
+      final body = {
+        'text': text,
+        'target': target, // Now sending 'en' or 'vi'
+        'session_id': 'user_001', 
+      };
+
+      final data = await _apiService.postRequest('/translate', body);
+
+      if (data != null) {
+        return TranslationResult.fromJson(data);
       }
-      */
-      
-      // Returning "Fake" data for now so your UI works immediately
-      return TranslationResult(
-        translatedText: "Translated: $text",
-        sourceLanguage: "Vietnamese",
-        targetLanguage: "English",
-      );
+      return null;
     } catch (e) {
-      throw Exception("Connection Failed: $e");
+      print("Translation Error: $e");
+      return null;
     }
   }
 }

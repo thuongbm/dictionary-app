@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/thesaurus_model.dart';
-import '../services/api_service.dart'; // 1. Import your API Service
+import '../services/api_service.dart';
 
 class ThesaurusProvider extends ChangeNotifier {
-  // 2. Create an instance of the ApiService
   final ApiService _apiService = ApiService();
 
   ThesaurusResult? _result;
@@ -11,11 +10,6 @@ class ThesaurusProvider extends ChangeNotifier {
 
   ThesaurusResult? get result => _result;
   bool get isLoading => _isLoading;
-
-  void hide() {
-    _result = null;
-    notifyListeners();
-  }
 
   Future<void> searchThesaurus(String query) async {
     if (query.isEmpty) return;
@@ -25,18 +19,18 @@ class ThesaurusProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 3. Call the actual service method we created
-      final data = await _apiService.getThesaurus(query);
+      final data = await _apiService.getRequest('/thesaurus/$query');
 
       if (data != null) {
-        // 4. Map the raw JSON data to your model
-        _result = ThesaurusResult.fromJson(data);
-      } else {
-        _result = null;
+        // Kiểm tra xem data có chứa thông báo lỗi không
+        if (data.containsKey('message') && data['message'] == 'Word not found') {
+           _result = ThesaurusResult(word: query, synonyms: [], antonyms: [], relatedPhrases: []);
+        } else {
+           _result = ThesaurusResult.fromJson(data);
+        }
       }
     } catch (e) {
       debugPrint("Thesaurus Provider Error: $e");
-      _result = null;
     } finally {
       _isLoading = false;
       notifyListeners();
