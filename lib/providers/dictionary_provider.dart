@@ -15,6 +15,20 @@ class DictionaryProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   List<String> get searchHistory => _searchHistory;
 
+// --- NEW: Initialize the Word of the Day ---
+  Future<void> fetchWordOfTheDay() async {
+    if (_result != null) return; // Don't fetch again if we already have a result
+    
+    _isLoading = true;
+    notifyListeners();
+
+    // You can pick a specific word or a random one from a list
+    _result = await _service.getWordData("serendipity"); 
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> searchWord(String word) async {
     _isLoading = true;
     notifyListeners();

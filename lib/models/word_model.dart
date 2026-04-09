@@ -3,24 +3,25 @@ class DictionaryResult {
   final String pronunciation;
   final List<Definition> definitions;
   final List<String> grammarTips;
+  final String audio; // 1. Add this field
 
   DictionaryResult({
     required this.word,
     required this.pronunciation,
     required this.definitions,
     required this.grammarTips,
+    required this.audio, // 2. Add to constructor
   });
 
   factory DictionaryResult.fromJson(Map<String, dynamic> json) {
     return DictionaryResult(
       word: json['word'] ?? '',
-      // Map 'phonetic' from Flask to 'pronunciation'
       pronunciation: json['phonetic'] ?? '', 
-      // Map 'meanings' from Flask to 'definitions'
       definitions: (json['meanings'] as List?)
               ?.map((d) => Definition.fromJson(d))
               .toList() ?? [],
-      grammarTips: [], // Flask doesn't provide this yet
+      grammarTips: [],
+      audio: json['audio'] ?? '', // 3. Map 'audio' from Flask
     );
   }
 }

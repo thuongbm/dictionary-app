@@ -1,6 +1,7 @@
 import 'package:dictionary_app/models/word_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../providers/dictionary_provider.dart';
 
 class DictionaryScreen extends StatefulWidget {
@@ -12,7 +13,7 @@ class DictionaryScreen extends StatefulWidget {
 
 class _DictionaryScreenState extends State<DictionaryScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
+  final AudioPlayer _audioPlayer = AudioPlayer(); // 2. Create the player instance
   // Các biến quản lý Focus và Overlay cho popup lịch sử
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
@@ -38,12 +39,32 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     });
   }
 
-  @override
+ @override
   void dispose() {
     _focusNode.dispose();
     _searchController.dispose();
-    _hideSearchHistory(); // Đảm bảo đóng popup khi huỷ widget
+    _audioPlayer.dispose(); // 3. Dispose the player to free up resources
+    _hideSearchHistory();
     super.dispose();
+  }
+
+  // 4. Create the play logic function
+  Future<void> _playPronunciation(String url) async {
+    if (url.isNotEmpty) {
+      try {
+        await _audioPlayer.play(UrlSource(url));
+      } catch (e) {
+        debugPrint("Error playing audio: $e");
+      }
+    } else {
+      // Optional: Show a message if no audio exists
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Pronunciation audio not available"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _submitSearch() {
@@ -254,7 +275,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
             ),
             IconButton(
               icon: const Icon(Icons.volume_up, color: Colors.blueAccent, size: 30),
-              onPressed: () {}, 
+              onPressed: () => _playPronunciation(data.audio),
             ),
           ],
         ),
