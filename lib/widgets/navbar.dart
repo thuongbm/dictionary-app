@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'hover_builder.dart'; 
 import '../screens/auth_screen.dart';
 import '../providers/auth_provider.dart'; 
-import '../providers/translation_provider.dart'; // THÊM IMPORT NÀY: Để xóa lịch sử khi Sign out
+import '../providers/translation_provider.dart';
 
 class Navbar extends StatelessWidget {
   final String currentTab;
@@ -19,7 +19,7 @@ class Navbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Đọc trạng thái đăng nhập
+    // Check login state
     final authProvider = context.watch<AuthProvider>();
     final isLoggedIn = authProvider.isLoggedIn;
     final username = authProvider.username ?? "";
@@ -47,27 +47,18 @@ class Navbar extends StatelessWidget {
               ),
             ),
           ),
+          
           const Spacer(),
           
           // Menu Items
-          _navItem(Icons.home_outlined, "Home", "home"),
-          _navItem(Icons.book_outlined, "Dictionary", "dictionary"),
-          _navItem(Icons.translate, "Translate", "translate"),
-          _navItem(Icons.waves_rounded, "Thesaurus", "thesaurus"),
+          _navItem(context, Icons.home_outlined, "Home", "home"),
+          _navItem(context, Icons.book_outlined, "Dictionary", "dictionary"),
+          _navItem(context, Icons.translate, "Translate", "translate"),
+          _navItem(context, Icons.waves_rounded, "Thesaurus", "thesaurus"),
           
           const Spacer(),
-          
-          // Language
-          const Row(
-            children: [
-              Icon(Icons.language, size: 20),
-              SizedBox(width: 8),
-              Text("English(US)", style: TextStyle(fontWeight: FontWeight.w500)),
-            ],
-          ),
-          const SizedBox(width: 30),
 
-          // --- CẬP NHẬT: LOGIC HIỂN THỊ DỰA TRÊN TRẠNG THÁI ĐĂNG NHẬP ---
+          // Auth Section - Logic based on login status
           isLoggedIn 
             ? Row(
                 children: [
@@ -85,7 +76,6 @@ class Navbar extends StatelessWidget {
               )
             : ElevatedButton(
                 onPressed: () {
-                  // Mở màn hình Login khi click
                   Navigator.pushNamed(context, '/login');
                 },
                 style: ElevatedButton.styleFrom(
@@ -104,10 +94,17 @@ class Navbar extends StatelessWidget {
     );
   }
 
-  Widget _navItem(IconData icon, String label, String tabId) {
+  Widget _navItem(BuildContext context, IconData icon, String label, String tabId) {
     bool isSelected = currentTab == tabId;
     return GestureDetector(
-      onTap: () => onTabSelected(tabId),
+      onTap: () {
+        // --- FIX: Clear translation result when switching tabs ---
+        // This ensures the right-hand text disappears
+        context.read<TranslationProvider>().resetCurrentTranslation();
+        
+        // Execute the tab selection
+        onTabSelected(tabId);
+      },
       child: HoverBuilder(
         builder: (isHovered) {
           Color contentColor = isSelected ? const Color(0xFFC85A48) : (isHovered ? Colors.blue : Colors.black87);
@@ -117,7 +114,14 @@ class Navbar extends StatelessWidget {
               children: [
                 Icon(icon, size: 20, color: contentColor),
                 const SizedBox(width: 6),
-                Text(label, style: TextStyle(color: contentColor, fontSize: 15, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal)),
+                Text(
+                  label, 
+                  style: TextStyle(
+                    color: contentColor, 
+                    fontSize: 15, 
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal
+                  )
+                ),
               ],
             ),
           );
@@ -127,7 +131,6 @@ class Navbar extends StatelessWidget {
   }
 }
 
-// --- UPDATED SUB-WIDGET WITH TIMER & CLICK FIX ---
 class ProfileAvatarMenu extends StatefulWidget {
   const ProfileAvatarMenu({super.key});
 
@@ -168,7 +171,7 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
         controller: _tooltipController,
         overlayChildBuilder: (context) {
           return Positioned(
-            top: 60, // Sits right below the navbar
+            top: 60, 
             right: 40,
             child: MouseRegion(
               onEnter: (_) => _showMenu(), 
@@ -211,13 +214,13 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
           debugPrint("Sign Out Clicked!");
           _tooltipController.hide();
           
-          // 1. Xóa sạch lịch sử dịch của User hiện tại trên UI
+          // Clear translation history from UI
           context.read<TranslationProvider>().clearHistory();
 
-          // 2. Gọi hàm logout từ AuthProvider để xóa trạng thái
+          // Clear auth state
           context.read<AuthProvider>().logout();
           
-          // 3. Về trang chủ (HomeScreen) dưới danh nghĩa Khách
+          // Redirect to Home as Guest
           Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         },
         borderRadius: BorderRadius.circular(12),

@@ -143,4 +143,11 @@ class TranslationProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void resetCurrentTranslation() {
+    _resultText = "";
+    _currentSourceAudio = "";
+    _currentTargetAudio = "";
+    notifyListeners();
+  }
 }
