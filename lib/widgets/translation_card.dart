@@ -6,6 +6,7 @@ import 'hover_builder.dart';
 import '../providers/translation_provider.dart';
 import '../providers/dictionary_provider.dart';
 import '../providers/thesaurus_provider.dart'; 
+import '../providers/auth_provider.dart'; // THÊM IMPORT NÀY: Để lấy ID người dùng
 
 class TranslationCard extends StatefulWidget {
   final TextEditingController inputController;
@@ -90,12 +91,16 @@ class _TranslationCardState extends State<TranslationCard> {
                   if (_debounce?.isActive ?? false) _debounce!.cancel();
                   _debounce = Timer(const Duration(milliseconds: 600), () {
                     if (val.isNotEmpty) {
-                      translationData.handleTranslation(val);
+                      // --- CẬP NHẬT 1: Lấy ID và truyền vào hàm dịch ---
+                      final userId = context.read<AuthProvider>().userId;
+                      translationData.handleTranslation(val, userId: userId);
                     }
                   });
                 },
                 onSubmitted: (val) async {
-                  await translationData.handleTranslation(val);
+                  // --- CẬP NHẬT 2: Lấy ID và truyền vào hàm dịch khi gõ Enter ---
+                  final userId = context.read<AuthProvider>().userId;
+                  await translationData.handleTranslation(val, userId: userId);
                 },
                 onCopy: () => _copyToClipboard(context, widget.inputController.text),
                 onAudio: () => widget.onPlayAudio(translationData.currentSourceAudio),
@@ -200,7 +205,6 @@ class _TranslationCardState extends State<TranslationCard> {
                     ),
             ),
             const SizedBox(height: 10),
-            // The Row now only contains the action icons
             _actionIcons(onCopy, onAudio), 
           ],
         ),

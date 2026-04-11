@@ -1,4 +1,8 @@
+import '../services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/translation_provider.dart'; // THÊM IMPORT NÀY
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -8,9 +12,13 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  bool _isLogin = true; // Set to true to show Login screen first
+  bool _isLogin = true; 
   bool _obscurePassword = true;
+  bool _isLoading = false;
   
+  // --- CỜ NHẬN DIỆN ĐĂNG KÝ MỚI ---
+  bool _isNewlyRegistered = false; 
+
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -19,6 +27,95 @@ class _AuthScreenState extends State<AuthScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _handleSubmit() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      _showSnackBar("Vui lòng nhập đầy đủ Username và Password", isError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = context.read<AuthProvider>();
+      
+      if (_isLogin) {
+        // --- 1. LOGIC ĐĂNG NHẬP ---
+        final success = await authProvider.login(username, password);
+        
+        if (success && mounted) {
+          final userId = authProvider.userId;
+          
+          if (userId != null) {
+            if (_isNewlyRegistered) {
+              // 1a. TÀI KHOẢN MỚI: Gộp dữ liệu
+              try {
+                // Gọi API Merge
+                await ApiService().mergeHistory(userId, "user_001");
+                
+                // MỚI THÊM: Try/Catch bọc riêng cho fetchUserHistory để không làm sập luồng
+                try {
+                  await context.read<TranslationProvider>().fetchUserHistory(userId);
+                } catch (e) {
+                  debugPrint("Không thể tải lịch sử sau khi gộp: $e");
+                }
+                
+              } catch (e) {
+                debugPrint("Lỗi gộp lịch sử: $e");
+              }
+              _isNewlyRegistered = false; 
+            } else {
+              // 1b. TÀI KHOẢN CŨ: Tải dữ liệu cũ
+              context.read<TranslationProvider>().clearHistory();
+              
+              try {
+                await context.read<TranslationProvider>().fetchUserHistory(userId);
+              } catch (e) {
+                 debugPrint("Không thể tải lịch sử: $e");
+              }
+            }
+          }
+
+          _showSnackBar("Welcome back, $username!");
+          // VỀ TRANG CHỦ MẶC ĐỊNH
+          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+          
+        } else if (!success) {
+          _showSnackBar("Login failed. Please check your credentials!", isError: true);
+        }
+      } else {
+        // --- 2. LOGIC ĐĂNG KÝ ---
+        final success = await authProvider.register(username, password);
+        if (success && mounted) {
+          _showSnackBar("Welcome! Please login with your new account.");
+          setState(() {
+            _isLogin = true;
+            _isNewlyRegistered = true; 
+          });
+          _passwordController.clear();
+        } else {
+          _showSnackBar("Registration failed. Username may already exist!", isError: true);
+        }
+      }
+    } catch (e) {
+      _showSnackBar("Lỗi kết nối: Server Flask chưa bật hoặc sai đường dẫn ($e)", isError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -31,24 +128,24 @@ class _AuthScreenState extends State<AuthScreen> {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF29B6F6), Color(0xFFB3E5FC)], // Light blue gradient
+                  colors: [Color(0xFF29B6F6), Color(0xFFB3E5FC)],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
               ),
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "N3Dictionary", // Used N3Dictionary as per your new mockup
+                  Text(
+                    "N3Dictionary",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 54,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 50),
-                  const Text(
+                  SizedBox(height: 50),
+                  Text(
                     "More than just\na dictionary.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -79,7 +176,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Text
                       Text(
                         _isLogin ? "Login to N3Dictionary" : "Sign up for N3Dictionary",
                         style: const TextStyle(
@@ -89,87 +185,68 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       const SizedBox(height: 35),
                       
-                      // Username Field
                       const Text("User name", style: TextStyle(fontSize: 16)),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _usernameController,
+                        enabled: !_isLoading,
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                       ),
                       const SizedBox(height: 25),
 
-                      // Password Field
                       const Text("Password", style: TextStyle(fontSize: 16)),
                       const SizedBox(height: 10),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
+                        enabled: !_isLoading,
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(color: Colors.grey.shade400),
-                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                               color: Colors.grey,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
+                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                           ),
                         ),
                       ),
                       const SizedBox(height: 35),
 
-                      // Action Button (Sign in / Sign up)
+                      // Nút hành động
                       SizedBox(
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF29B6F6), 
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                             elevation: 0,
                           ),
-                          onPressed: () {
-                            // TODO: Add your Flask API authentication logic here
-                            debugPrint("Username: ${_usernameController.text}");
-                            debugPrint("Password: ${_passwordController.text}");
-                            debugPrint("Mode: ${_isLogin ? 'Login' : 'Sign Up'}");
-                          },
-                          child: Text(
-                            _isLogin ? "Sign in" : "Sign up", // Toggle button text
-                            style: const TextStyle(
-                              fontSize: 18, 
-                              color: Colors.white, 
-                              fontWeight: FontWeight.bold
-                            ),
-                          ),
+                          onPressed: _isLoading ? null : _handleSubmit,
+                          child: _isLoading 
+                            ? const SizedBox(
+                                height: 20, 
+                                width: 20, 
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                              )
+                            : Text(
+                                _isLogin ? "Sign in" : "Sign up",
+                                style: const TextStyle(
+                                  fontSize: 18, 
+                                  color: Colors.white, 
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
                         ),
                       ),
                       const SizedBox(height: 25),
 
-                      // Toggle between Login and Sign Up
+                      // Chuyển đổi form
                       Center(
                         child: Wrap(
                           crossAxisAlignment: WrapCrossAlignment.center,
@@ -179,13 +256,17 @@ class _AuthScreenState extends State<AuthScreen> {
                               style: const TextStyle(color: Colors.black87, fontSize: 14),
                             ),
                             InkWell(
-                              onTap: () {
+                              onTap: _isLoading ? null : () {
                                 setState(() {
                                   _isLogin = !_isLogin;
+                                  _usernameController.clear();
+                                  _passwordController.clear();
+                                  // Hủy cờ nếu người dùng chủ động chuyển tab
+                                  _isNewlyRegistered = false; 
                                 });
                               },
                               child: Text(
-                                _isLogin ? "Sign up" : "Sign in", // Toggle link text
+                                _isLogin ? "Sign up" : "Sign in",
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 14,

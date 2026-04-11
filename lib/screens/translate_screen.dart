@@ -106,7 +106,7 @@ class _TranslateScreenState extends State<TranslateScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Nhật ký", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text("History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => setState(() => _isHistoryOpen = false),
@@ -119,7 +119,7 @@ class _TranslateScreenState extends State<TranslateScreen> {
           child: Consumer<TranslationProvider>(
             builder: (context, provider, child) {
               if (provider.history.isEmpty) {
-                return const Center(child: Text("Chưa có lịch sử dịch", style: TextStyle(color: Colors.grey)));
+                return const Center(child: Text("No search history yet", style: TextStyle(color: Colors.grey)));
               }
               return ListView.separated(
                 padding: const EdgeInsets.all(15),

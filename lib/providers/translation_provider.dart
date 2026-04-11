@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/translation_history.dart'; // <--- Now this works!
+import '../models/translation_history.dart'; 
 import '../services/translation_service.dart';
 
 class TranslationProvider with ChangeNotifier {
@@ -51,7 +51,37 @@ class TranslationProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> handleTranslation(String input) async {
+  // --- HÀM MỚI 1: XÓA LỊCH SỬ KHI ĐĂNG XUẤT HOẶC ĐỔI TÀI KHOẢN ---
+  void clearHistory() {
+    _history.clear();
+    _resultText = "";
+    _currentSourceAudio = "";
+    _currentTargetAudio = "";
+    notifyListeners();
+  }
+
+  // --- HÀM MỚI 2: TẢI LỊCH SỬ TỪ SERVER VỀ ---
+  Future<void> fetchUserHistory(int userId) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Gọi service để lấy list từ Backend
+      final fetchedHistory = await _service.getUserHistory(userId);
+      
+      if (fetchedHistory != null) {
+        _history.clear(); // Xóa lịch sử cũ trên màn hình
+        _history.addAll(fetchedHistory); // Đổ dữ liệu mới vào
+      }
+    } catch (e) {
+      debugPrint("Lỗi tải lịch sử: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> handleTranslation(String input, {int? userId}) async {
     if (input.trim().isEmpty) return;
     _isLoading = true;
     notifyListeners();
@@ -60,8 +90,12 @@ class TranslationProvider with ChangeNotifier {
       final sCode = _getLangCode(_sourceLanguage);
       final tCode = _getLangCode(_targetLanguage);
 
-      // This fix matches your rewritten TranslationService
-      final result = await _service.translate(input, sCode, tCode);
+      final result = await _service.translate(
+        input, 
+        sCode, 
+        tCode, 
+        userId: userId, 
+      );
       
       if (result != null) {
         _resultText = result.translatedText;
