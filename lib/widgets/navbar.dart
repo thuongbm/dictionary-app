@@ -1,8 +1,11 @@
 import 'dart:async'; 
 import 'package:flutter/material.dart';
 import 'dart:html' as html; 
+import 'package:provider/provider.dart'; 
 import 'hover_builder.dart'; 
-import '../screens/auth_screen.dart'; // IMPORT YOUR NEW AUTH SCREEN HERE
+import '../screens/auth_screen.dart';
+import '../providers/auth_provider.dart'; 
+import '../providers/translation_provider.dart'; // THÊM IMPORT NÀY: Để xóa lịch sử khi Sign out
 
 class Navbar extends StatelessWidget {
   final String currentTab;
@@ -16,6 +19,11 @@ class Navbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Đọc trạng thái đăng nhập
+    final authProvider = context.watch<AuthProvider>();
+    final isLoggedIn = authProvider.isLoggedIn;
+    final username = authProvider.username ?? "";
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
       decoration: const BoxDecoration(
@@ -58,9 +66,39 @@ class Navbar extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 30),
-          
-          // --- Fixed Hoverable Profile Section ---
-          const ProfileAvatarMenu(),
+
+          // --- CẬP NHẬT: LOGIC HIỂN THỊ DỰA TRÊN TRẠNG THÁI ĐĂNG NHẬP ---
+          isLoggedIn 
+            ? Row(
+                children: [
+                  Text(
+                    "Hi, $username", 
+                    style: const TextStyle(
+                      fontSize: 15, 
+                      fontWeight: FontWeight.bold, 
+                      color: Color(0xFFC85A48)
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  const ProfileAvatarMenu(),
+                ],
+              )
+            : ElevatedButton(
+                onPressed: () {
+                  // Mở màn hình Login khi click
+                  Navigator.pushNamed(context, '/login');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF29B6F6),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: const Text(
+                  "Sign in", 
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)
+                ),
+              ),
         ],
       ),
     );
@@ -133,9 +171,9 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
             top: 60, // Sits right below the navbar
             right: 40,
             child: MouseRegion(
-              onEnter: (_) => _showMenu(), // Keeps it open when hovering the menu itself
+              onEnter: (_) => _showMenu(), 
               onExit: (_) => _hideMenu(),
-              child: _buildSignOutButton(context), // Pass context here for navigation
+              child: _buildSignOutButton(context), 
             ),
           );
         },
@@ -165,7 +203,6 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
     );
   }
 
-  // We add BuildContext here so we can use the Navigator
   Widget _buildSignOutButton(BuildContext context) {
     return Material(
       color: Colors.transparent,
@@ -174,10 +211,14 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
           debugPrint("Sign Out Clicked!");
           _tooltipController.hide();
           
-          // Navigate to the AuthScreen and replace the current screen
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AuthScreen()),
-          );
+          // 1. Xóa sạch lịch sử dịch của User hiện tại trên UI
+          context.read<TranslationProvider>().clearHistory();
+
+          // 2. Gọi hàm logout từ AuthProvider để xóa trạng thái
+          context.read<AuthProvider>().logout();
+          
+          // 3. Về trang chủ (HomeScreen) dưới danh nghĩa Khách
+          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
@@ -194,7 +235,7 @@ class _ProfileAvatarMenuState extends State<ProfileAvatarMenu> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.logout, size: 18, color: Colors.black87),
-              SizedBox(width: 10), // Removed the const keyword here due to parent const constraints
+              SizedBox(width: 10), 
               Text(
                 "Sign out", 
                 style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 14)
