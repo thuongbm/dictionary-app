@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/thesaurus_provider.dart';
 import '../models/thesaurus_model.dart';
+import '../widgets/error_state_widget.dart'; // Import widget mới
 
 class ThesaurusScreen extends StatefulWidget {
   const ThesaurusScreen({super.key});
@@ -12,8 +13,6 @@ class ThesaurusScreen extends StatefulWidget {
 
 class _ThesaurusScreenState extends State<ThesaurusScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
-  // Các biến quản lý Focus và Overlay cho popup lịch sử
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
@@ -25,7 +24,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
       if (_focusNode.hasFocus) {
         _showSearchHistory();
       } else {
-        // Delay 150ms để xử lý sự kiện click trước khi ẩn popup
         Future.delayed(const Duration(milliseconds: 150), () {
           if (mounted && !_focusNode.hasFocus) {
             _hideSearchHistory();
@@ -52,7 +50,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
     }
   }
 
-  // --- LOGIC OVERLAY ---
   void _showSearchHistory() {
     final provider = context.read<ThesaurusProvider>();
     if (provider.searchHistory.isEmpty) return;
@@ -141,12 +138,11 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    // 1. Priority: Show error state if the word wasn't found (404)
                     if (provider.errorMessage != null) {
-                      return _buildErrorState(provider.errorMessage!);
+                      // Sử dụng Widget dùng chung
+                      return ErrorStateWidget(message: provider.errorMessage!);
                     }
 
-                    // 2. Show result if data exists
                     final data = provider.result;
                     if (data == null) {
                       return _buildEmptyState();
@@ -163,7 +159,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
     );
   }
 
-  // Widget: Search Bar logic
   Widget _buildSearchBar() {
     return CompositedTransformTarget(
       link: _layerLink,
@@ -205,7 +200,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
     );
   }
 
-  // Widget: Default state before searching
   Widget _buildEmptyState() {
     return const Center(
       child: Text(
@@ -215,38 +209,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
     );
   }
 
-  // Widget: Error state (Orange Sad Face) - Matches DictionaryScreen for consistency
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.sentiment_dissatisfied, 
-            size: 80, 
-            color: Colors.orangeAccent
-          ),
-          const SizedBox(height: 15),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18, 
-              fontWeight: FontWeight.w500, 
-              color: Colors.black87
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            "Check your spelling or try a different word.",
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Widget: Displaying synonyms in a Wrap collection
   Widget _buildSynonymList(ThesaurusResult data) {
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -261,7 +223,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
         ),
         const SizedBox(height: 20),
         
-        // Final fallback if result came back but synonyms list is empty
         if (data.synonyms.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 10),
@@ -280,7 +241,6 @@ class _ThesaurusScreenState extends State<ThesaurusScreen> {
     );
   }
 
-  // Widget: Individual Synonym Chip
   Widget _buildSynonymChip(String word) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
