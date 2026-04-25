@@ -1,6 +1,4 @@
 import 'package:uuid/uuid.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:io';
 
 class ApiConfig {
   // IP mặc định nếu không tìm thấy (fallback)

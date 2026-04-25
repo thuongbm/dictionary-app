@@ -104,6 +104,7 @@ class ApiService {
   // 7. LẤY DANH SÁCH NGÔN NGỮ
   Future<Map<String, String>> fetchLanguages() async {
     final result = await getRequest("/languages");
+    print("DEBUG: Language Result = $result");
     if (result != null) {
       return Map<String, String>.from(result);
     }

@@ -1,4 +1,10 @@
+import 'package:dictionary_app/config/api_config.dart';
 import 'package:dictionary_app/models/word_model.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -45,19 +51,43 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   }
 
   Future<void> _playPronunciation(String url) async {
-    if (url.isNotEmpty) {
-      try {
+    if (url.isEmpty) return;
+
+    try {
+      await _audioPlayer.stop();
+
+      // Kiểm tra nguồn API
+      bool isOurApi = url.contains("ngrok-free.dev") || url.startsWith("/");
+
+      if (isOurApi) {
+        // Tạo URL chuẩn
+        Uri parsedUri = Uri.parse(url);
+        String text = parsedUri.queryParameters['text'] ?? '';
+        String lang = parsedUri.queryParameters['lang'] ?? 'en';
+        String safeUrl = "${ApiConfig.baseUrl}/tts?text=$text&lang=$lang";
+
+        // Tải audio bytes
+        final response = await http.get(Uri.parse(safeUrl), headers: {"ngrok-skip-browser-warning": "true"});
+
+        if (response.statusCode == 200) {
+          if (kIsWeb) {
+            // WEB: Dùng Base64
+            String base64Audio = base64Encode(response.bodyBytes);
+            await _audioPlayer.play(UrlSource("data:audio/mpeg;base64,$base64Audio"));
+          } else {
+            // WINDOWS / ANDROID: Lưu ra file tạm rồi phát
+            final tempDir = await getTemporaryDirectory();
+            final file = File('${tempDir.path}/temp_pronounce.mp3');
+            await file.writeAsBytes(response.bodyBytes);
+            await _audioPlayer.play(DeviceFileSource(file.path));
+          }
+        }
+      } else {
+        // URL từ điển bên ngoài (Google API...) - phát trực tiếp
         await _audioPlayer.play(UrlSource(url));
-      } catch (e) {
-        debugPrint("Error playing audio: $e");
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pronunciation audio not available"),
-          duration: Duration(seconds: 2),
-        ),
-      );
+    } catch (e) {
+      debugPrint("Error: $e");
     }
   }
 

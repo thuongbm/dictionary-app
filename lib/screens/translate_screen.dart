@@ -1,8 +1,14 @@
+import 'package:dictionary_app/config/api_config.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../widgets/translation_card.dart';
 import '../providers/translation_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class TranslateScreen extends StatefulWidget {
   const TranslateScreen({super.key});
@@ -22,7 +28,6 @@ class _TranslateScreenState extends State<TranslateScreen> {
   void initState() {
     super.initState();
     // Một số trình duyệt cần "đánh thức" audio context
-    _audioPlayer.setSourceUrl("about:blank"); 
   } 
 
   @override
@@ -32,16 +37,48 @@ class _TranslateScreenState extends State<TranslateScreen> {
     super.dispose();
   }
 
-// 4. Helper function to play the TTS stream
+  // 4. Helper function to play the TTS stream
   void _playTts(String path) async {
-    if (path.isNotEmpty) {
-      try {
-        await _audioPlayer.stop();
-        // Prepend the base URL so Flutter knows to hit your Flask server
-        await _audioPlayer.play(UrlSource(path));
-      } catch (e) {
-        debugPrint("TTS Play Error: $e");
+    if (path.isEmpty) return;
+
+    try {
+      // 1. Dừng player hiện tại
+      await _audioPlayer.stop();
+      await _audioPlayer.release(); // Giải phóng tài nguyên để thả file cũ ra
+
+      Uri parsedUri = Uri.parse(path);
+      String text = parsedUri.queryParameters['text'] ?? '';
+      String lang = parsedUri.queryParameters['lang'] ?? 'vi';
+      String safeUrl = "${ApiConfig.baseUrl}/tts?text=${Uri.encodeComponent(text)}&lang=$lang";
+
+      final response = await http.get(
+        Uri.parse(safeUrl), 
+        headers: {"ngrok-skip-browser-warning": "true"}
+      );
+
+      if (response.statusCode == 200) {
+        if (kIsWeb) {
+          String base64Audio = base64Encode(response.bodyBytes);
+          await _audioPlayer.play(UrlSource("data:audio/mpeg;base64,$base64Audio"));
+        } else {
+          // 2. TẠO TÊN FILE DUY NHẤT để tránh lỗi "file is being used"
+          final tempDir = await getTemporaryDirectory();
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final file = File('${tempDir.path}/tts_$timestamp.mp3'); 
+          
+          await file.writeAsBytes(response.bodyBytes);
+          await _audioPlayer.play(DeviceFileSource(file.path));
+
+          // 3. (Tùy chọn) Xóa các file cũ sau khi phát xong để tránh đầy bộ nhớ tạm
+          _audioPlayer.onPlayerComplete.listen((_) {
+             if (file.existsSync()) {
+               file.delete().catchError((e) => debugPrint("Lỗi xóa file: $e"));
+             }
+          });
+        }
       }
+    } catch (e) {
+      debugPrint("TTS Error: $e");
     }
   }
 
